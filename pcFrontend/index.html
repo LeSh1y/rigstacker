@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCForge — Configurator</title>
+
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('pcforge-theme');
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', theme);
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            ink: {
+              950: 'var(--ink-950)',
+              900: 'var(--ink-900)',
+              850: 'var(--ink-850)',
+              800: 'var(--ink-800)',
+              750: 'var(--ink-750)',
+              700: 'var(--ink-700)',
+              600: 'var(--ink-600)',
+              500: 'var(--ink-500)',
+            },
+            line: {
+              DEFAULT: 'var(--line)',
+              strong: 'var(--line-strong)',
+            },
+            fg: {
+              DEFAULT: 'var(--fg)',
+              muted: 'var(--fg-muted)',
+              dim: 'var(--fg-dim)',
+            },
+            accent: {
+              DEFAULT: 'var(--accent)',
+              hi: 'var(--accent-hi)',
+              lo: 'var(--accent-lo)',
+              bg: 'var(--accent-bg)',
+            },
+            ok: 'var(--ok)',
+            'ok-bg': 'var(--ok-bg)',
+            warn: 'var(--warn)',
+            'warn-bg': 'var(--warn-bg)',
+            bad: 'var(--bad)',
+            'bad-bg': 'var(--bad-bg)',
+          },
+          borderRadius: {
+            xs: '2px',
+            sm: '3px',
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="min-h-screen">
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

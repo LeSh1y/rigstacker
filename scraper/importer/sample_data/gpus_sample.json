@@ -1,0 +1,17 @@
+[
+  {"source":"manual","external_id":"mf-001","component_type":"gpu","component_id":1,
+   "title":"GeForce RTX 4060 8GB neu OVP","condition":"new","price_eur":285.00,
+   "url":"https://mindfactory.de/product/rtx4060","seller_name":"Mindfactory"},
+  {"source":"manual","external_id":"mf-002","component_type":"gpu","component_id":2,
+   "title":"RTX 4070 Ti Super 16GB","condition":"new","price_eur":539.00,
+   "url":"https://alternate.de/rtx4070tis","seller_name":"Alternate"},
+  {"source":"manual","external_id":"eb-001","component_type":"gpu","component_id":2,
+   "title":"RTX 4070 Ti Super gebraucht wenig benutzt","condition":"used","price_eur":420.00,
+   "url":"https://ebay.de/itm/123","seller_name":"privat_seller_de","seller_rating":0.98},
+  {"source":"manual","external_id":"eb-002","component_type":"gpu","component_id":3,
+   "title":"RTX 5080 16GB NEU versiegelt","condition":"new","price_eur":980.00,
+   "url":"https://ebay.de/itm/456","seller_name":"techshop_de","seller_rating":0.99},
+  {"source":"manual","external_id":"eb-003","component_type":"gpu","component_id":1,
+   "title":"RTX 4060 Mining Karte kein Bild defekt Bastler","condition":"used","price_eur":89.00,
+   "url":"https://ebay.de/itm/789","seller_name":"seller123","seller_rating":0.71}
+]

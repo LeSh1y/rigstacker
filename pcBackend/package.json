@@ -1,0 +1,33 @@
+{
+  "name": "pc-backend",
+  "version": "1.0.0",
+  "description": "Backend for PC parts compatibility checker",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "*",
+    "express": "*",
+    "express-rate-limit": "*",
+    "knex": "*",
+    "mysql2": "*",
+    "redis": "^4.6.13",
+    "uuid": "^8.3.2",
+    "winston": "*",
+    "zod": "*"
+  },
+  "devDependencies": {
+    "jest": "*",
+    "nodemon": "*",
+    "supertest": "*"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "verbose": true
+  }
+}

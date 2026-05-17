@@ -1,0 +1,49 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# frontend build
+pcFrontend/dist/
+pcFrontend/.vite/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# logs/temp/debug
+*.log
+scraper/debug/
+scraper/test.html
+scraper/response.json
+scraper/scheduler.log
+
+# local tools
+.claude/
+.vscode/
+.idea/
+
+# old/local copies
+pcbuilder/
+pcFrontend-patched/
+pcFrontend-old/
+pcFrontend-backup/
+pcProject2/
+src_backup_before_theme/
+src_backup_before_ui_polish/
+*_backup/
+*-backup/
+*_patched/
+*-patched/

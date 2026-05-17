@@ -1,0 +1,229 @@
+@import './theme.css';
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+html, body {
+  background: var(--ink-900);
+  color: var(--fg);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--bg-grid) 1px, transparent 0);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: "tnum", "ss01";
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type=range].pc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+}
+
+input[type=range].pc-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--pct,50%), var(--range-track) var(--pct,50%));
+}
+
+input[type=range].pc-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--range-track);
+}
+
+input[type=range].pc-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+input[type=range].pc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-800);
+  border: 3px solid var(--accent);
+  margin-top: -6px;
+  cursor: grab;
+  box-shadow: 0 0 0 4px var(--range-thumb-ring);
+  transition: box-shadow .15s;
+}
+
+input[type=range].pc-range::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 7px var(--accent-ring);
+}
+
+input[type=range].pc-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-800);
+  border: 3px solid var(--accent);
+  cursor: grab;
+}
+
+.card-glow:hover {
+  border-color: var(--line-strong);
+}
+
+.card-glow.is-primary {
+  border-left: 2px solid var(--accent);
+}
+
+.bottleneck-track {
+  background: var(--ink-850);
+  border-color: var(--line);
+}
+
+.bottleneck-fill {
+  background: var(--accent);
+}
+
+.bottleneck-fill-muted {
+  background: color-mix(in srgb, var(--accent) 58%, transparent);
+}
+
+.bottleneck-midline {
+  background: var(--line-strong);
+}
+
+.bottleneck-point {
+  background: var(--accent);
+  border-color: var(--ink-850);
+}
+
+.cta-grad {
+  background: linear-gradient(135deg, var(--cta-from) 0%, var(--cta-to) 100%);
+  color: var(--cta-fg);
+  box-shadow: var(--cta-shadow);
+  transition: box-shadow .2s, filter .15s;
+}
+
+.cta-grad:hover {
+  filter: brightness(1.06);
+  box-shadow: var(--cta-shadow-hover);
+}
+
+.cta-grad:active {
+  filter: brightness(0.95);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line-strong);
+}
+
+@keyframes borderBreathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.border-breathe {
+  animation: borderBreathe 3s ease-in-out infinite;
+}
+
+.uc-card.is-active {
+  border-left: 2px solid var(--accent);
+}
+
+@keyframes fpsBar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.fps-bar {
+  transform-origin: bottom;
+  animation: fpsBar 1.4s ease-in-out infinite;
+}
+
+.fps-bar:nth-child(2) { animation-delay: 0.18s; }
+.fps-bar:nth-child(3) { animation-delay: 0.36s; }
+.fps-bar:nth-child(4) { animation-delay: 0.54s; }
+
+details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] .chev {
+  transform: rotate(90deg);
+}
+
+.chev {
+  transition: transform .15s;
+}
+
+@keyframes shimmerBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--accent-ring), transparent);
+  animation: shimmerBar 1.4s linear infinite;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fade-up {
+  animation: fadeUp .35s ease-out both;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--accent-ring);
+  color: var(--fg);
+}

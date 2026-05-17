@@ -1,0 +1,157 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   BuildHealthPanel.css
+   Scoped to .build-health-* classes only. No global selectors, no resets.
+   Works on a dark background. Uses system / Inter / JetBrains Mono if
+   available — falls back to ui-monospace / system stack.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.build-health-panel {
+  /* container */
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-800) 60%, transparent);
+  color: var(--fg);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.build-health-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.build-health-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.build-health-title {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fg-muted);
+}
+
+.build-health-pill {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 2px 7px;
+  border: 1px solid;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.build-health-pill[data-status="ok"]       { color: var(--ok); border-color: var(--ok-border); background: var(--ok-bg); }
+.build-health-pill[data-status="warning"]  { color: var(--warn); border-color: var(--warn-border); background: var(--warn-bg); }
+.build-health-pill[data-status="critical"] { color: var(--bad); border-color: var(--bad-border); background: var(--bad-bg); }
+
+.build-health-summary {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Grid of 5 cells with hairline dividers ───────────────────────────── */
+.build-health-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;                              /* hairline separator */
+  background: var(--line);               /* shows through gaps as a line */
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* Responsive collapse — 3 cols on medium, 2 cols on small */
+@media (max-width: 900px) {
+  .build-health-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .build-health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .build-health-summary { display: none; }
+}
+
+/* ── Cell ─────────────────────────────────────────────────────────────── */
+.build-health-cell {
+  background: var(--ink-800);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.build-health-cell-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.build-health-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--fg-dim);
+}
+.build-health-cell[data-status="ok"]       .build-health-dot { background: var(--ok); }
+.build-health-cell[data-status="warning"]  .build-health-dot { background: var(--warn); }
+.build-health-cell[data-status="critical"] .build-health-dot,
+.build-health-cell[data-status="bad"]      .build-health-dot { background: var(--bad); }
+
+.build-health-cell-label {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.build-health-cell-primary {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.build-health-cell[data-status="warning"]  .build-health-cell-primary { color: var(--warn); }
+.build-health-cell[data-status="critical"] .build-health-cell-primary,
+.build-health-cell[data-status="bad"]      .build-health-cell-primary { color: var(--bad); }
+
+.build-health-cell-detail {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
