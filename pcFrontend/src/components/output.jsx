@@ -151,7 +151,7 @@ function TypeAvatar({ type, size = 44, highlight = false }) {
   )
 }
 
-function BuildCard({ type, item, locked, onLock, onSwap, index, primary }) {
+function BuildCard({ type, item, locked, onLock, onSwap, swapping, index, primary }) {
   const price = priceOf(item)
   const pricing = item.pricing ?? {}
   const condition = pricing.condition ?? 'new'
@@ -220,9 +220,13 @@ function BuildCard({ type, item, locked, onLock, onSwap, index, primary }) {
             </div>
           )}
           <div className="flex items-center gap-1 mt-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={onSwap} title="Swap"
-              className="w-7 h-7 flex items-center justify-center border border-line rounded-xs text-fg-muted hover:text-fg hover:border-line-strong">
-              <I.Refresh className="w-3.5 h-3.5"/>
+            <button
+              onClick={onSwap}
+              title={locked ? "Unlock to swap" : "Swap"}
+              disabled={locked || swapping}
+              className={"w-7 h-7 flex items-center justify-center border border-line rounded-xs text-fg-muted hover:text-fg hover:border-line-strong disabled:opacity-45 disabled:cursor-not-allowed " +
+                (swapping ? "text-accent-hi" : "")}>
+              <I.Refresh className={"w-3.5 h-3.5 " + (swapping ? "animate-spin" : "")}/>
             </button>
             <button onClick={onLock} title={locked ? "Unlock" : "Lock"}
               className={"w-7 h-7 flex items-center justify-center border rounded-xs " +
@@ -346,9 +350,14 @@ function BottleneckPanel({ bottleneck }) {
   )
 }
 
-function BuildList({ build, anchors, bottleneck, buildHealth, onLock, onSwap }) {
+function BuildList({ build, anchors, bottleneck, buildHealth, onLock, onSwap, swappingType = null, swapError = '' }) {
   return (
     <div className="px-6 py-6">
+      {swapError && (
+        <div className="mb-3 border border-warn/30 bg-warn-bg text-warn rounded-sm px-3 py-2 text-[12.5px]">
+          {swapError}
+        </div>
+      )}
       <div className="space-y-2.5">
         {BUILD_ORDER.map((k, i) => {
           const t = COMPONENT_TYPES.find(t => t.key === canonicalTypeKey(k))
@@ -364,6 +373,7 @@ function BuildList({ build, anchors, bottleneck, buildHealth, onLock, onSwap }) 
               locked={!!anchors[canonicalTypeKey(k)]}
               onLock={() => onLock(k)}
               onSwap={() => onSwap(k)}
+              swapping={swappingType === canonicalTypeKey(k)}
               index={i}
               primary={primary}
             />

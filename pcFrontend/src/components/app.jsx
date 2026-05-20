@@ -256,6 +256,8 @@ function App() {
   const [isDirty, setIsDirty] = React.useState(false);
   const [lastSavedSignature, setLastSavedSignature] = React.useState(null);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [swappingType, setSwappingType] = React.useState(null);
+  const [swapError, setSwapError] = React.useState('');
   const buildRequestRef = React.useRef(0);
   const pricingRequestRef = React.useRef(0);
   const pricingCacheRef = React.useRef(new Map());
@@ -402,6 +404,8 @@ function App() {
     setShareUrl('');
     setShareError('');
     setShareCopied(false);
+    setSwappingType(null);
+    setSwapError('');
 
     try {
       const anchorIds = Object.fromEntries(
@@ -412,6 +416,7 @@ function App() {
       const res = await axios.post(`${API}/configurator`, {
         budget: state.budget,
         useCase: state.useCase,
+        pricingMode: state.pricingMode,
         ...anchorIds,
       });
       const data = res.data?.data ?? res.data;
@@ -553,6 +558,54 @@ function App() {
     }
   }
 
+  async function handleSwap(k) {
+    if (!build || swappingType) return;
+
+    const anchorKey = anchorKeyFor(k);
+    if (state.anchors[anchorKey]) return;
+
+    const componentType = requestKeyFor(k);
+    const anchorIds = Object.fromEntries(
+      Object.entries(state.anchors)
+        .filter(([, v]) => v?.id)
+        .map(([type, v]) => [`${requestKeyFor(type)}_id`, v.id])
+    );
+
+    const requestId = ++pricingRequestRef.current;
+    setSwappingType(anchorKey);
+    setSwapError('');
+
+    try {
+      const res = await axios.post(`${API}/configurator/swap`, {
+        build,
+        componentType,
+        budget: state.budget,
+        useCase: state.useCase,
+        pricingMode: state.pricingMode,
+        anchors: anchorIds,
+      });
+      const data = res.data?.data ?? res.data;
+      const swappedBuild = normalizeBuild(data?.build ?? data);
+      const pricedBuild = await applyPricingRecommendations(swappedBuild, state.pricingMode);
+      if (pricingRequestRef.current !== requestId) return;
+
+      setBaseBuild(swappedBuild);
+      setBuild(pricedBuild);
+      setIsCompatible(data?.compatible ?? true);
+      setIssues(data?.issues ?? []);
+      setWarnings(data?.warnings ?? []);
+      setBottleneck(data?.bottleneck ?? null);
+      setBuildHealth(data?.buildHealth ?? null);
+      if (draftBuildId) setIsDirty(true);
+    } catch (err) {
+      console.error('Swap failed', err);
+      const message = err?.response?.data?.message ?? err?.response?.data?.error ?? 'No compatible alternative found.';
+      setSwapError(message);
+    } finally {
+      if (pricingRequestRef.current === requestId) setSwappingType(null);
+    }
+  }
+
   React.useEffect(() => {
     if (phase === 'done' && draftBuildId) {
       setIsDirty(true);
@@ -616,7 +669,9 @@ function App() {
               bottleneck={bottleneck}
               buildHealth={buildHealth}
               onLock={lockToggle}
-              onSwap={() => { if (draftBuildId) setIsDirty(true); }} />
+              onSwap={handleSwap}
+              swappingType={swappingType}
+              swapError={swapError} />
           )}
 
           {/* Spacer pushes summary to bottom even when content is short */}

@@ -29,4 +29,29 @@ const budgetSchema = z.object({
   anchorComponents: anchorComponentsSchema,
 });
 
-module.exports = { budgetSchema };
+const looseComponentSchema = z.object({ id: z.number().int().positive().nullable().optional() }).passthrough().nullable().optional();
+
+const swapSchema = z.object({
+  budget: z.number({ invalid_type_error: 'budget must be a number' }).positive().min(200).max(20000),
+  useCase: z.enum(['gaming', 'workstation', 'office', 'optimal']),
+  pricingMode: z.enum(['new', 'best_value']).optional(),
+  componentType: z.enum(['cpu', 'gpu', 'motherboard', 'mainboard', 'mobo', 'ram', 'storage', 'ssd', 'psu', 'cooler', 'case']),
+  anchors: anchorComponentsSchema,
+  anchorComponents: anchorComponentsSchema,
+  build: z.object({
+    cpu: looseComponentSchema,
+    gpu: looseComponentSchema,
+    motherboard: looseComponentSchema,
+    mainboard: looseComponentSchema,
+    mobo: looseComponentSchema,
+    ram: looseComponentSchema,
+    storage: looseComponentSchema,
+    ssd: looseComponentSchema,
+    psu: looseComponentSchema,
+    cooler: looseComponentSchema,
+    case: looseComponentSchema,
+    cases: looseComponentSchema,
+  }).passthrough(),
+});
+
+module.exports = { budgetSchema, swapSchema };

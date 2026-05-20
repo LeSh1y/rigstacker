@@ -14,9 +14,21 @@ const GAMING_MAX_OVERFLOW = 0.05;
 const CPU_BOTTLENECK_LIMIT = 16;
 const OFFER_TYPE_ALIASES = {
   motherboard: 'mainboard',
+  mainboard: 'mainboard',
   mobo: 'mainboard',
   cases: 'case',
   ssd: 'storage',
+};
+
+const COMPONENT_TABLES = {
+  gpu: 'gpus',
+  cpu: 'cpus',
+  mainboard: 'mainboards',
+  ram: 'ram_kits',
+  psu: 'psus',
+  case: 'cases',
+  cooler: 'coolers',
+  storage: 'storage',
 };
 
 const VIRTUAL_INTEGRATED_GPU = {
@@ -436,6 +448,143 @@ function totalBuildPrice(build, pricingMode = 'new') {
     }, 0);
 }
 
+function buildKeyFor(type) {
+  return OFFER_TYPE_ALIASES[type] ?? type;
+}
+
+function idOf(component) {
+  return component?.id ?? null;
+}
+
+async function fetchComponentById(type, id) {
+  const normalized = buildKeyFor(type);
+  const table = COMPONENT_TABLES[normalized];
+  if (!table || !id) return null;
+  return db(table).where({ id, is_available: true }).first().timeout(QUERY_TIMEOUT_MS);
+}
+
+async function hydrateBuild(rawBuild = {}) {
+  const ids = {
+    cpu: idOf(rawBuild.cpu),
+    gpu: idOf(rawBuild.gpu),
+    mainboard: idOf(rawBuild.mainboard ?? rawBuild.motherboard ?? rawBuild.mobo),
+    ram: idOf(rawBuild.ram),
+    storage: idOf(rawBuild.storage ?? rawBuild.ssd),
+    psu: idOf(rawBuild.psu),
+    cooler: idOf(rawBuild.cooler),
+    case: idOf(rawBuild.case ?? rawBuild.cases),
+  };
+
+  const entries = await Promise.all(
+    Object.entries(ids).map(async ([type, id]) => [type, await fetchComponentById(type, id)])
+  );
+  return Object.fromEntries(entries);
+}
+
+function hasAnchor(anchorIds = {}, type, componentId) {
+  return Number(anchorIds[`${buildKeyFor(type)}_id`]) === Number(componentId);
+}
+
+function supportsRamType(board, ramType) {
+  return parseJsonList(board?.supported_ram_types).includes(ramType);
+}
+
+function supportsSocket(cooler, socket) {
+  return parseJsonList(cooler?.supported_sockets).includes(socket);
+}
+
+function formFactorFits(pcCase, formFactor) {
+  return parseJsonList(pcCase?.supported_form_factors).includes(formFactor);
+}
+
+function estimatedDraw(build) {
+  return Number(build.gpu?.tdp ?? 0) + Number(build.cpu?.tdp ?? 0) + OVERHEAD_W;
+}
+
+function componentCompatible(build, type, candidate) {
+  const next = { ...build, [type]: candidate };
+  if (type === 'mainboard') next.motherboard = candidate;
+
+  if (next.cpu && next.mainboard && next.cpu.socket !== next.mainboard.socket) return false;
+  if (next.ram && next.mainboard && !supportsRamType(next.mainboard, ramTypeOf(next.ram))) return false;
+  if (next.cpu && next.ram) {
+    const cpuRamTypes = parseJsonList(next.cpu.supported_ram_types);
+    if (!cpuRamTypes.includes(ramTypeOf(next.ram))) return false;
+  }
+  if (next.psu && next.cpu) {
+    if (Number(next.psu.wattage ?? 0) < Math.ceil(estimatedDraw(next) * 1.25)) return false;
+  }
+  if (next.case && next.mainboard && !formFactorFits(next.case, next.mainboard.form_factor)) return false;
+  if (next.case && next.gpu && Number(next.case.max_gpu_length_mm ?? 0) < Number(next.gpu.length_mm ?? 0)) return false;
+  if (next.case && next.cooler && Number(next.case.max_cooler_height_mm ?? 0) < Number(next.cooler.height_mm ?? 0)) return false;
+  if (next.cooler && next.cpu) {
+    if (!supportsSocket(next.cooler, next.cpu.socket)) return false;
+    if (Number(next.cooler.max_tdp ?? 0) < Math.ceil(Number(next.cpu.tdp ?? 0) * 1.15)) return false;
+  }
+  return true;
+}
+
+function candidateScore(candidate, type, pricingMode) {
+  const price = Math.max(componentPrice(candidate, type, pricingMode), 1);
+  const benchmark = Number(candidate.benchmark_score ?? 0);
+  if (benchmark > 0) return benchmark / price;
+  if (type === 'ram') return (Number(candidate.capacity_gb ?? 0) * 100 + Number(candidate.speed_mhz ?? 0)) / price;
+  if (type === 'psu') return (Number(candidate.wattage ?? 0) + 40) / price;
+  if (type === 'cooler') return (Number(candidate.max_tdp ?? 0) + 20) / price;
+  return 1 / price;
+}
+
+async function pickSwapCandidate(build, type, pricingMode) {
+  const table = COMPONENT_TABLES[type];
+  const current = build[type];
+  if (!table || !current?.id) return null;
+
+  let query = db(table).where('is_available', true).whereNot('id', current.id);
+  if (type === 'cpu' && build.mainboard?.socket) query = query.where('socket', build.mainboard.socket);
+  if (type === 'mainboard' && build.cpu?.socket) query = query.where('socket', build.cpu.socket);
+  if (type === 'ram' && build.mainboard) {
+    const allowed = parseJsonList(build.mainboard.supported_ram_types);
+    if (allowed.length) query = query.whereIn('ram_type', allowed);
+  }
+  if (type === 'psu') query = query.where('wattage', '>=', Math.ceil(estimatedDraw(build) * 1.25));
+  if (type === 'cooler' && build.cpu) query = query.where('max_tdp', '>=', Math.ceil(Number(build.cpu.tdp ?? 0) * 1.15));
+
+  const candidates = await query.timeout(QUERY_TIMEOUT_MS);
+  return candidates
+    .filter((candidate) => componentCompatible(build, type, candidate))
+    .map((candidate) => ({ candidate, score: candidateScore(candidate, type, pricingMode) }))
+    .sort((a, b) => b.score - a.score || componentPrice(a.candidate, type, pricingMode) - componentPrice(b.candidate, type, pricingMode))[0]
+    ?.candidate ?? null;
+}
+
+async function finalizeBuild(internalBuild, budget, useCase, pricingMode, anchoredKeys = [], budgetSpentAnchors = 0) {
+  await enrichWithOfficialPrices(internalBuild);
+  const verification = await verifyBuild(internalBuild);
+  const bottleneck = computeBottleneck(internalBuild.gpu, internalBuild.cpu, useCase);
+  const build = normalizeBuildForResponse(internalBuild);
+  const totalPrice = Object.values(build)
+    .filter(Boolean)
+    .reduce((sum, component) => sum + parseFloat(component.price_eur ?? component.price ?? 0), 0);
+  const roundedTotalPrice = Math.round(totalPrice * 100) / 100;
+  const budgetOverflow = Math.round((roundedTotalPrice - budget) * 100) / 100;
+  const allWarnings = [...verification.warnings];
+  if (budgetOverflow > 0) allWarnings.push(`Build exceeds budget by €${budgetOverflow}`);
+
+  return {
+    build,
+    totalPrice: roundedTotalPrice,
+    budgetTotal: budget,
+    budgetSpentAnchors: Math.round(budgetSpentAnchors * 100) / 100,
+    budgetOverflow: budgetOverflow > 0 ? budgetOverflow : 0,
+    compatible: verification.compatible,
+    issues: verification.issues,
+    warnings: allWarnings,
+    bottleneck,
+    buildHealth: analyzeBuildHealth(build, useCase),
+    anchoredComponents: anchoredKeys,
+  };
+}
+
 const parse = (v) => {
   if (Array.isArray(v)) return v;
 
@@ -717,4 +866,52 @@ return {
 };
 }
 
-module.exports = { buildConfiguration };
+async function swapComponent({ build, componentType, budget, useCase, pricingMode = 'new', anchors = {} }) {
+  const normalizedType = buildKeyFor(componentType);
+  if (!COMPONENT_TABLES[normalizedType]) {
+    const err = new Error(`Unknown component type: ${componentType}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const currentBuild = await hydrateBuild(build);
+  const current = currentBuild[normalizedType];
+  if (!current?.id) {
+    const err = new Error(`No current ${normalizedType} component to swap`);
+    err.statusCode = 422;
+    throw err;
+  }
+
+  if (hasAnchor(anchors, normalizedType, current.id)) {
+    const err = new Error(`${normalizedType} is locked and cannot be swapped`);
+    err.statusCode = 423;
+    throw err;
+  }
+
+  const candidate = await pickSwapCandidate(currentBuild, normalizedType, pricingMode);
+  if (!candidate) {
+    const err = new Error(`No compatible alternative found for ${normalizedType}`);
+    err.statusCode = 422;
+    throw err;
+  }
+
+  const nextBuild = { ...currentBuild, [normalizedType]: candidate };
+  if (normalizedType === 'mainboard') nextBuild.motherboard = candidate;
+
+  const anchoredKeys = Object.entries(anchors)
+    .filter(([, id]) => id)
+    .map(([key]) => buildKeyFor(key.replace(/_id$/, '')));
+  const budgetSpentAnchors = Object.entries(anchors)
+    .filter(([, id]) => id)
+    .reduce((sum, [key, id]) => {
+      const type = buildKeyFor(key.replace(/_id$/, ''));
+      const component = nextBuild[type];
+      return component && Number(component.id) === Number(id)
+        ? sum + componentPrice(component, type, pricingMode)
+        : sum;
+    }, 0);
+
+  return finalizeBuild(nextBuild, budget, useCase, pricingMode, anchoredKeys, budgetSpentAnchors);
+}
+
+module.exports = { buildConfiguration, swapComponent };

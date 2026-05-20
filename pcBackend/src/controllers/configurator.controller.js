@@ -1,4 +1,4 @@
-const { buildConfiguration } = require('../services/configurator/configurator.service');
+const { buildConfiguration, swapComponent } = require('../services/configurator/configurator.service');
 const apiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const logger = require('../utils/logger');
@@ -30,4 +30,37 @@ const build = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { build };
+const swap = asyncHandler(async (req, res) => {
+  const {
+    build: currentBuild,
+    componentType,
+    budget,
+    useCase,
+    pricingMode = 'new',
+    anchors,
+    anchorComponents = {},
+  } = req.body;
+
+  try {
+    const result = await swapComponent({
+      build: currentBuild,
+      componentType,
+      budget,
+      useCase,
+      pricingMode,
+      anchors: anchors ?? anchorComponents,
+    });
+
+    return apiResponse.success(res, result);
+  } catch (err) {
+    logger.error(`[Configurator] swap caught error: ${err.message}`);
+
+    if (isDatabaseUnavailable(err)) {
+      return res.status(503).json({ error: 'Database temporarily unavailable' });
+    }
+
+    return apiResponse.error(res, err.message || 'Component swap failed', err.statusCode || 500);
+  }
+});
+
+module.exports = { build, swap };
