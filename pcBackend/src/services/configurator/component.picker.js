@@ -1,7 +1,7 @@
 const db = require('../../config/db');
 
 const QUERY_TIMEOUT_MS = 5000;
-const USED_ALLOWED_TYPES = new Set(['gpu', 'cpu', 'ram', 'storage']);
+const USED_ALLOWED_TYPES = new Set(['cpu', 'gpu', 'ram', 'mainboard', 'motherboard', 'case', 'cooler']);
 
 const USE_CASE_PROFILE = {
   gaming: {

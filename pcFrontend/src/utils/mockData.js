@@ -3,25 +3,25 @@ import * as I from '../components/icons.jsx'
 // Mock catalog & build data — no real branded products, generic SKUs
 
 const COMPONENT_TYPES = [
-  { key: 'cpu',     label: 'CPU',         abbr:'CPU', dot:'#3b82f6', Icon: I.CPU },
-  { key: 'gpu',     label: 'GPU',         abbr:'GPU', dot:'#ef4444', Icon: I.GPU },
+  { key: 'cpu',     label: 'CPU',         abbr:'CPU', dot:'var(--component-cpu)', Icon: I.CPU },
+  { key: 'gpu',     label: 'GPU',         abbr:'GPU', dot:'var(--component-gpu)', Icon: I.GPU },
   { key: 'mobo',    label: 'Motherboard', abbr:'MB',  dot:'#8b5cf6', Icon: I.Mobo },
   { key: 'ram',     label: 'RAM',         abbr:'RAM', dot:'#22c55e', Icon: I.RAM },
   { key: 'storage', label: 'Storage',     abbr:'SSD', dot:'#f1f5f9', Icon: I.Storage },
   { key: 'psu',     label: 'PSU',         abbr:'PSU', dot:'#eab308', Icon: I.PSU },
-  { key: 'cooler',  label: 'Cooler',      abbr:'CLR', dot:'#00d4ff', Icon: I.Cooler },
+  { key: 'cooler',  label: 'Cooler',      abbr:'CLR', dot:'var(--component-cooler)', Icon: I.Cooler },
   { key: 'case',    label: 'Case',        abbr:'CSE', dot:'#64748b', Icon: I.Case },
 ];
 
 const TYPE_COLORS = {
-  cpu:     '#3b82f6',
-  gpu:     '#ef4444',
+  cpu:     'var(--component-cpu)',
+  gpu:     'var(--component-gpu)',
   mobo:    '#8b5cf6',
   ram:     '#22c55e',
   psu:     '#eab308',
   case:    '#64748b',
   storage: '#f1f5f9',
-  cooler:  '#00d4ff',
+  cooler:  'var(--component-cooler)',
 };
 
 // Use-case subtitles intentionally removed; labels carry the meaning.

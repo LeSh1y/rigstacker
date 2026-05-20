@@ -77,7 +77,7 @@ function EmptyState({ budget, useCase }) {
         </div>
         <h2 className="text-[20px] font-semibold tracking-tight mb-2">Configure your build</h2>
         <p className="text-[13px] text-fg-muted leading-relaxed mb-6">
-          Set a budget, pick a use case, and PCForge generates a fully compatible PC build in seconds.
+          Set a budget, pick a use case, and RigStacker generates a fully compatible PC build in seconds.
         </p>
         <div className="grid grid-cols-3 gap-3 mt-8">
           {[
@@ -125,7 +125,7 @@ function CompatibilityBadge({ status }) {
 
 function TypeAvatar({ type, size = 44, highlight = false }) {
   const dot = type.dot
-  const lightFills = ['#f1f5f9', '#eab308', '#22c55e', '#00d4ff']
+  const lightFills = ['#f1f5f9', '#eab308', '#22c55e']
   const textOn = lightFills.includes(dot) ? '#051018' : '#ffffff'
 
   const baseStyle = highlight ? {
@@ -201,7 +201,7 @@ function BuildCard({ type, item, locked, onLock, onSwap, index, primary }) {
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 title="Open product offer"
-                className="shrink-0 mono text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 border border-line rounded-xs text-fg-muted hover:text-accent-hi hover:bg-accent-bg hover:border-accent hover:shadow-[0_0_18px_-10px_rgba(0,212,255,0.9)] transition-all"
+                className="shrink-0 mono text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 border border-line rounded-xs text-fg-muted hover:text-accent-hi hover:bg-accent-bg hover:border-accent hover:shadow-[0_0_18px_-10px_rgba(47,128,237,0.45)] transition-all"
               >
                 <span className="hidden sm:inline">View deal </span>↗
               </a>
@@ -406,7 +406,7 @@ function SummaryBar({ build, budget, onSave, isCompatible, pricingMode, saveLabe
   }
 
   return (
-    <div className="sticky bottom-0 bg-ink-900/95 backdrop-blur-sm border-t border-line">
+    <div className="sticky bottom-0 bg-[var(--summary-bg)] backdrop-blur-sm border-t border-line">
       <div className="px-6 py-4 flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-6 flex-1 min-w-0 flex-wrap">
           <Stat label="Total" value={`€${Math.round(total).toLocaleString()}`} />

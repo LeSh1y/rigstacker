@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import * as I from './icons.jsx'
 import { USE_CASES, COMPONENT_TYPES, CATALOG } from '../utils/mockData.js'
 import axios from 'axios'
@@ -84,7 +85,9 @@ function matchesQuery(item, query, type) {
 
 function BudgetSlider({ value, onChange }) {
   const min = 200, max = 5000, step = 50
-  const pct = ((value - min) / (max - min)) * 100
+  const percentFor = (n) => ((n - min) / (max - min)) * 100
+  const pct = percentFor(value)
+  const ticks = [200, 1000, 2500, 5000]
 
   return (
     <div>
@@ -109,12 +112,13 @@ function BudgetSlider({ value, onChange }) {
         style={{ '--pct': pct + '%' }}
       />
 
-      <div className="flex justify-between mt-2.5">
-        {[200, 1000, 2500, 5000].map(v => (
+      <div className="relative mt-2.5 h-4">
+        {ticks.map(v => (
           <button
             key={v}
             onClick={() => onChange(v)}
-            className={"mono text-[10.5px] tracking-wide transition-colors " + (value === v ? "text-accent-hi" : "text-fg-muted hover:text-fg")}
+            className={"absolute -translate-x-1/2 mono text-[10.5px] tracking-wide transition-colors " + (value === v ? "text-accent-hi" : "text-fg-muted hover:text-fg")}
+            style={{ left: percentFor(v) + '%' }}
           >
             €{v >= 1000 ? (v / 1000) + 'k' : v}
           </button>
@@ -144,7 +148,7 @@ function PricingModeSwitch({ value, onChange }) {
               className={[
                 "flex-1 py-2 px-2.5 rounded-xs text-left transition-all",
                 active
-                  ? "bg-accent-bg border border-line shadow-[0_0_12px_rgba(0,212,255,0.12)]"
+                  ? "pricing-mode-active bg-accent-bg border border-accent shadow-[0_0_12px_rgba(47,128,237,0.14)]"
                   : "border border-transparent hover:bg-ink-750"
               ].join(' ')}
             >
@@ -176,7 +180,7 @@ function UseCaseGrid({ value, onChange }) {
               className={[
                 "uc-card group relative text-left px-3 py-3.5 rounded-sm border transition-all overflow-hidden",
                 active
-                  ? "is-active border-line-strong bg-accent-bg"
+                  ? "is-active border-accent bg-accent-bg"
                   : "border-line bg-ink-800 hover:border-line-strong hover:bg-ink-750"
               ].join(' ')}
             >
@@ -314,7 +318,7 @@ function AnchorRow({ type, anchor, onSet, onClear }) {
             "flex-1 min-w-0 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-sm border text-left transition-colors",
             anchor ? "bg-ink-800" : "border-line bg-ink-850 hover:border-line-strong"
           ].join(' ')}
-          style={anchor ? { borderColor: c + '80', borderLeft: `2px solid ${c}` } : {}}
+          style={anchor ? { borderColor: `color-mix(in srgb, ${c} 50%, transparent)`, borderLeft: `2px solid ${c}` } : {}}
         >
           <span className={"text-[12.5px] truncate " + (anchor ? "text-fg" : "text-fg-muted")}>
             {anchorLabel(anchor)}
@@ -439,16 +443,16 @@ function AnchorPanel({ anchors, setAnchor, clearAnchor }) {
 
 function Sidebar({ state, dispatch, onBuild, building }) {
   return (
-    <aside className="w-[88vw] max-w-[400px] lg:w-[360px] xl:w-[400px] shrink-0 border-r border-line bg-ink-900 flex flex-col h-full">
-      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-line">
+    <aside className="w-[88vw] max-w-[400px] lg:w-[360px] xl:w-[400px] shrink-0 border-r border-line bg-[var(--sidebar-bg)] flex flex-col h-full">
+      <Link to="/" aria-label="Go to RigStacker home" className="flex items-center gap-2.5 px-5 h-14 border-b border-line cursor-pointer">
         <div className="w-7 h-7 rounded-sm bg-gradient-to-br from-accent to-accent-lo flex items-center justify-center text-ink-950">
           <I.Logo className="w-4 h-4" />
         </div>
 
-        <div className="text-[14px] font-semibold tracking-tight">PCForge</div>
+        <div className="text-[14px] font-semibold tracking-tight">RigStacker</div>
 
         <span className="ml-auto mono text-[10.5px] tracking-widest text-fg-muted border border-line px-1.5 py-0.5 rounded-xs">DE</span>
-      </div>
+      </Link>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
         <BudgetSlider
@@ -475,7 +479,7 @@ function Sidebar({ state, dispatch, onBuild, building }) {
         </div>
       </div>
 
-      <div className="px-5 py-4 border-t border-line bg-ink-900">
+      <div className="px-5 py-4 border-t border-line bg-[var(--sidebar-bg)]">
         <button
           onClick={onBuild}
           disabled={building}

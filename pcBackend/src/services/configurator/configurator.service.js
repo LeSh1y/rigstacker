@@ -30,16 +30,73 @@ const VIRTUAL_INTEGRATED_GPU = {
   source: 'cpu',
 };
 
+function offerIsActive(offer) {
+  if (!offer) return false;
+  return offer?.is_active == null || offer.is_active === true || offer.is_active === 1;
+}
+
+async function findActiveOfferRef(componentType, componentId, offerId, externalId) {
+  if (!offerId && !externalId) return null;
+
+  const query = db('offers')
+    .where({ component_type: componentType, component_id: componentId })
+    .where((builder) => {
+      builder.where('is_active', true).orWhereNull('is_active');
+    });
+
+  if (offerId) {
+    query.where('id', offerId);
+  } else {
+    query.where('external_id', externalId);
+  }
+
+  return query.first().timeout(QUERY_TIMEOUT_MS);
+}
+
+async function dropInactiveRecommendationRefs(component, componentType) {
+  const checks = [
+    {
+      prefix: 'recommended_new',
+      offerId: component.recommended_new_offer_id,
+      externalId: component.recommended_new_external_id,
+    },
+    {
+      prefix: 'recommended_used',
+      offerId: component.recommended_used_offer_id,
+      externalId: component.recommended_used_external_id,
+    },
+  ];
+
+  for (const check of checks) {
+    if (!check.offerId && !check.externalId) continue;
+
+    const activeOffer = await findActiveOfferRef(componentType, component.id, check.offerId, check.externalId);
+    if (offerIsActive(activeOffer)) continue;
+
+    component[`${check.prefix}_price`] = null;
+    component[`${check.prefix}_source`] = null;
+    component[`${check.prefix}_offer_id`] = null;
+    component[`${check.prefix}_external_id`] = null;
+    if (check.prefix === 'recommended_used') {
+      component.recommended_used_discount = null;
+    }
+  }
+}
+
 async function enrichWithOfficialPrices(build) {
   await Promise.all(
     Object.entries(build)
       .filter(([, v]) => v != null && !v.isVirtual)
       .map(async ([key, component]) => {
         const componentType = OFFER_TYPE_ALIASES[key] ?? key;
+        await dropInactiveRecommendationRefs(component, componentType);
         const fallbackPrice = component.price_eur ?? component.price ?? null;
 
         const [row] = await db('offers')
-          .where({ component_type: componentType, component_id: component.id, condition: 'new', is_active: true, is_suspicious: false })
+          .where({ component_type: componentType, component_id: component.id, condition: 'new', is_suspicious: false })
+          .where((builder) => {
+            builder.where('is_active', true).orWhereNull('is_active');
+          })
           .whereIn('source', OFFICIAL_SOURCES)
           .min('price_eur as value')
           .timeout(QUERY_TIMEOUT_MS);

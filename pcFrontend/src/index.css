@@ -90,16 +90,16 @@ input[type=range].pc-range::-moz-range-thumb {
 }
 
 .bottleneck-track {
-  background: var(--ink-850);
+  background: var(--bar-track, var(--ink-850));
   border-color: var(--line);
 }
 
 .bottleneck-fill {
-  background: var(--accent);
+  background: var(--bar-cpu, var(--accent));
 }
 
 .bottleneck-fill-muted {
-  background: color-mix(in srgb, var(--accent) 58%, transparent);
+  background: var(--bar-gpu, color-mix(in srgb, var(--accent) 58%, transparent));
 }
 
 .bottleneck-midline {
@@ -125,6 +125,63 @@ input[type=range].pc-range::-moz-range-thumb {
 
 .cta-grad:active {
   filter: brightness(0.95);
+}
+
+:root[data-theme="light"] .cta-grad {
+  background: linear-gradient(135deg, #2F80ED 0%, #1D6FE3 100%) !important;
+  color: #FFFFFF;
+}
+
+:root[data-theme="light"] .cta-grad:hover {
+  background: #1D6FE3 !important;
+  filter: none;
+}
+
+:root[data-theme="light"] input[type=range].pc-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #2F80ED var(--pct, 50%), #E7EEF5 var(--pct, 50%));
+}
+
+:root[data-theme="light"] input[type=range].pc-range::-moz-range-progress {
+  background: #2F80ED;
+}
+
+:root[data-theme="light"] input[type=range].pc-range::-webkit-slider-thumb {
+  border-color: #2F80ED;
+}
+
+:root[data-theme="light"] input[type=range].pc-range::-moz-range-thumb {
+  border-color: #2F80ED;
+}
+
+:root[data-theme="light"] .bottleneck-track {
+  background: #E7EEF5;
+}
+
+:root[data-theme="light"] .bottleneck-fill {
+  background: #2F80ED !important;
+}
+
+:root[data-theme="light"] .bottleneck-fill-muted {
+  background: #14B8A6 !important;
+}
+
+:root[data-theme="light"] .bottleneck-point {
+  background: #2F80ED;
+}
+
+:root[data-theme="light"] .card-glow.is-primary,
+:root[data-theme="light"] .uc-card.is-active {
+  border-left-color: #2F80ED;
+}
+
+:root[data-theme="light"] .pricing-mode-active,
+:root[data-theme="light"] .uc-card.is-active {
+  background: #EAF3FF !important;
+  border-color: #2F80ED !important;
+}
+
+:root[data-theme="light"] .build-health-panel {
+  background: var(--ink-800);
 }
 
 ::-webkit-scrollbar {

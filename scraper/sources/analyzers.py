@@ -34,11 +34,11 @@ USED_ALLOWED = {
     'gpu': True,
     'case': True,
     'cooler': True,
-    'cpu': False,
-    'ram': False,
-    'mainboard': False,
-    'storage': False,
-    'psu': False,
+    'cpu': True,
+    'ram': True,
+    'mainboard': True,
+    'storage': True,
+    'psu': True,
 }
 STRONG_BAD_USED_FLAGS = {
     'broken',
@@ -50,10 +50,18 @@ STRONG_BAD_USED_FLAGS = {
     'not_working',
     'auction_listing',
 }
+USED_DISCOUNT_THRESHOLDS = {
+    'cpu': 0.15,
+    'gpu': 0.20,
+    'ram': 0.20,
+    'mainboard': 0.25,
+    'case': 0.25,
+    'cooler': 0.20,
+}
 ACCESSORY_TITLE_RE = re.compile(
     r'\b('
     r'box|empty\s+box|ovp\s+leer|karton|fan|l[uü]fter|cooler|heatsink|backplate|'
-    r'cable|adapter|bracket|holder|ersatzteil|replacement|parts|spare|'
+    r'cable|adapter|bracket|mounting\s+kit|montagekit|holder|ersatzteil|replacement|parts|spare|'
     r'defekt|defective|broken|not\s+working|damaged|mining|for\s+parts|'
     r'ohne\s+garantie|no\s+warranty'
     r')\b',
@@ -101,12 +109,46 @@ def _is_false(value: Any) -> bool:
     return False
 
 
+def _is_active_offer(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() not in {'0', 'false', 'no'}
+    return True
+
+
 def _valid_price(value: Any) -> float | None:
     try:
         price = float(value)
     except (TypeError, ValueError):
         return None
     return price if PRICE_MIN <= price <= PRICE_MAX else None
+
+
+def _effective_used_price(offer: dict) -> float | None:
+    total_price = _valid_price(offer.get('total_price'))
+    if total_price is not None:
+        return total_price
+    return _valid_price(offer.get('price_eur'))
+
+
+def _is_true(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {'1', 'true', 'yes'}
+    return False
+
+
+def _reject_used(reason: str, component_type: str, title: str, **extra: Any) -> None:
+    details = ' '.join(f'{key}={value}' for key, value in extra.items())
+    logger.info('[UsedOfferAnalyzer] %s %s %s title="%s"', reason, component_type, details, title)
 
 
 def _parse_risk_flags(value: Any) -> list[str]:
@@ -288,6 +330,8 @@ class NewOfferAnalyzer:
         normalized_type = _normalize_type(component_type)
 
         for offer in offers:
+            if not _is_active_offer(offer.get('is_active')):
+                continue
             source = (offer.get('source') or '').strip().lower()
             condition = (offer.get('condition') or '').strip().lower()
             url = (offer.get('url') or '').strip()
@@ -346,48 +390,93 @@ class UsedOfferAnalyzer:
         scored: list[tuple[float, float, dict]] = []
 
         for offer in offers:
+            if not _is_active_offer(offer.get('is_active')):
+                continue
             source = (offer.get('source') or '').strip().lower()
             condition = (offer.get('condition') or '').strip().lower()
             url = (offer.get('url') or '').strip()
-            used_price = _valid_price(offer.get('price_eur'))
+            title = offer.get('title', '')
+            item_price = _valid_price(offer.get('price_eur'))
+            used_price = _effective_used_price(offer)
 
             if source != 'ebay':
                 continue
             if condition not in USED_CONDITIONS:
                 continue
             if not _is_false(offer.get('is_suspicious')):
+                _reject_used('rejected_bad_condition', normalized_type, title)
                 continue
             if used_price is None:
                 continue
             if not url:
                 continue
-            if is_bad_gpu_offer(normalized_type, offer.get('title', '')):
+            if is_bad_gpu_offer(normalized_type, title):
+                _reject_used('rejected_bad_condition', normalized_type, title)
                 continue
-            if not _is_relevant_used_title(component_name, offer.get('title', ''), normalized_type):
-                continue
-
-            discount_pct = (new_price_value - used_price) / new_price_value
-            if discount_pct < 0.15:
-                continue
-            if normalized_type == 'gpu' and used_price < 0.45 * new_price_value:
-                continue
-            if normalized_type == 'gpu' and used_price > 0.95 * new_price_value:
+            if not _is_relevant_used_title(component_name, title, normalized_type):
+                if ACCESSORY_TITLE_RE.search(title or ''):
+                    _reject_used('rejected_accessory_only', normalized_type, title)
                 continue
 
             risk_flags = _parse_risk_flags(offer.get('risk_flags'))
             if STRONG_BAD_USED_FLAGS.intersection(risk_flags):
+                _reject_used('rejected_bad_condition', normalized_type, title, flags=','.join(risk_flags))
+                continue
+
+            if normalized_type == 'case':
+                if _is_true(offer.get('shipping_unknown')):
+                    _reject_used('rejected_shipping_unknown_for_case', normalized_type, title)
+                    continue
+                shipping_price = _valid_price(offer.get('shipping_price'))
+                if shipping_price is not None and item_price is not None and shipping_price > item_price:
+                    _reject_used(
+                        'rejected_shipping_too_high',
+                        normalized_type,
+                        title,
+                        item_price=item_price,
+                        shipping_price=shipping_price,
+                    )
+                    continue
+                if 'local_only' in risk_flags:
+                    _reject_used('rejected_bad_condition', normalized_type, title, flags='local_only')
+                    continue
+
+            discount_pct = (new_price_value - used_price) / new_price_value
+            threshold = USED_DISCOUNT_THRESHOLDS.get(normalized_type, 0.15)
+            if discount_pct < threshold:
+                _reject_used(
+                    'rejected_insufficient_discount',
+                    normalized_type,
+                    title,
+                    discount=round(discount_pct, 4),
+                    required=threshold,
+                )
+                continue
+            if normalized_type == 'gpu' and used_price < 0.45 * new_price_value:
+                _reject_used('rejected_bad_condition', normalized_type, title)
+                continue
+            if normalized_type == 'gpu' and used_price > 0.95 * new_price_value:
+                _reject_used('rejected_insufficient_discount', normalized_type, title)
                 continue
 
             rating = _seller_rating(offer.get('seller_rating'))
             score = (discount_pct * 100) + (rating * 10) - (len(risk_flags) * 2)
+            _reject_used(
+                'accepted_used_value',
+                normalized_type,
+                title,
+                total_price=used_price,
+                discount=round(discount_pct, 4),
+            )
             scored.append((score, discount_pct, {**offer, 'risk_flags': risk_flags}))
 
         if not scored:
             return None
 
         _, discount_pct, offer = max(scored, key=lambda item: item[0])
+        effective_price = _effective_used_price(offer)
         return {
-            'price': float(offer['price_eur']),
+            'price': float(effective_price),
             'offer': offer,
             'discount_pct': discount_pct,
         }
@@ -437,9 +526,10 @@ def refresh_recommended_new_offer(db, component_type: str, component_id: int) ->
         '''
         SELECT id, source, external_id, component_type, component_id, title,
                `condition`, price_eur, url, seller_name, seller_rating,
-               is_suspicious
+               is_active, is_suspicious
         FROM offers
         WHERE component_type = %s AND component_id = %s
+          AND COALESCE(is_active, 1) = 1
         ''',
         (normalized_type, component_id),
     )
@@ -507,10 +597,12 @@ def refresh_recommended_used_offer(db, component_type: str, component_id: int) -
     offers = db.fetchall(
         '''
         SELECT id, source, external_id, component_type, component_id, title,
-               `condition`, price_eur, url, seller_name, seller_rating,
-               is_suspicious, risk_flags
+               `condition`, price_eur, shipping_price, total_price, shipping_unknown,
+               url, seller_name, seller_rating,
+               is_active, is_suspicious, risk_flags
         FROM offers
         WHERE component_type = %s AND component_id = %s
+          AND COALESCE(is_active, 1) = 1
         ''',
         (normalized_type, component_id),
     )

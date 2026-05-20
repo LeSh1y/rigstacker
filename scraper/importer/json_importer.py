@@ -55,7 +55,11 @@ def import_offers(filepath):
                 offer_id = existing["id"]
                 db.execute(
                     """UPDATE offers
-                       SET price_eur=%s, last_seen_at=NOW(), is_active=1
+                       SET price_eur=%s,
+                           last_seen_at=NOW(),
+                           is_active=1,
+                           inactive_reason=NULL,
+                           inactive_checked_at=NULL
                        WHERE id=%s""",
                     (price_eur, offer_id),
                 )
@@ -65,8 +69,8 @@ def import_offers(filepath):
                     """INSERT INTO offers
                        (source, external_id, component_type, component_id,
                         title, `condition`, price_eur, url, seller_name, seller_rating,
-                        is_active, created_at, last_seen_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW(),NOW())""",
+                        is_active, inactive_reason, inactive_checked_at, created_at, last_seen_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NULL,NULL,NOW(),NOW())""",
                     (source, external_id, component_type, component_id,
                      title, condition, price_eur, url, seller_name, seller_rating),
                 )

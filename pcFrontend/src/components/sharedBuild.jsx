@@ -1,6 +1,6 @@
 import React from 'react'
 import axios from 'axios'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { BuildList, BuildingState, SummaryBar } from './output.jsx'
 
 const API = 'http://localhost:3000/api'
@@ -37,9 +37,9 @@ function SharedBuildPage() {
   return (
     <div className="h-screen flex flex-col text-fg bg-ink-900">
       <header className="h-14 shrink-0 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-ink-900/80 backdrop-blur-sm gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[15px] font-semibold tracking-tight text-fg">PCForge Shared Build</span>
-        </div>
+        <Link to="/" aria-label="Go to RigStacker home" className="flex items-center gap-3 min-w-0 cursor-pointer">
+          <span className="text-[15px] font-semibold tracking-tight text-fg">RigStacker Shared Build</span>
+        </Link>
         <a className="text-[12px] text-fg-muted hover:text-fg px-2 py-1" href="/">Build your own</a>
       </header>
 

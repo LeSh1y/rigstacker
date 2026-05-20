@@ -1,6 +1,6 @@
 import React from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import * as I from './icons.jsx'
 
 const API = 'http://localhost:3000/api'
@@ -40,10 +40,30 @@ function getInitialTheme() {
 }
 
 function ThemeToggle({ theme, setTheme }) {
+  const switchTimer = React.useRef(null)
   const options = [
     { key: 'dark', label: 'Dark' },
     { key: 'light', label: 'Light' },
   ]
+
+  React.useEffect(() => {
+    return () => {
+      window.clearTimeout(switchTimer.current)
+      document.documentElement.classList.remove('theme-switching')
+    }
+  }, [])
+
+  function switchTheme(nextTheme) {
+    if (nextTheme === theme) return
+
+    const root = document.documentElement
+    root.classList.add('theme-switching')
+    window.clearTimeout(switchTimer.current)
+    switchTimer.current = window.setTimeout(() => {
+      root.classList.remove('theme-switching')
+    }, 260)
+    setTheme(nextTheme)
+  }
 
   return (
     <div className="theme-toggle inline-flex rounded-sm border border-line bg-ink-850 p-0.5">
@@ -53,7 +73,7 @@ function ThemeToggle({ theme, setTheme }) {
           <button
             key={option.key}
             type="button"
-            onClick={() => setTheme(option.key)}
+            onClick={() => switchTheme(option.key)}
             className={[
               "px-2.5 py-1 mono text-[10.5px] uppercase tracking-widest rounded-xs border transition-colors",
               active
@@ -103,9 +123,9 @@ function StatusPill({ label, status }) {
 function TopNav({ theme, setTheme }) {
   return (
     <header className="h-14 shrink-0 px-4 sm:px-6 flex items-center justify-between border-b border-line bg-ink-900/80 backdrop-blur-sm gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-[15px] font-semibold tracking-tight text-fg">PCForge Builds</span>
-      </div>
+      <Link to="/" aria-label="Go to RigStacker home" className="flex items-center gap-3 min-w-0 cursor-pointer">
+        <span className="text-[15px] font-semibold tracking-tight text-fg">RigStacker Builds</span>
+      </Link>
       <div className="flex items-center gap-2">
         <div className="hidden md:flex items-center gap-1.5 mono text-[10px] text-fg-dim">
           <span className="w-1.5 h-1.5 rounded-full bg-ok"/>

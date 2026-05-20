@@ -26,6 +26,8 @@ const TABLE_MAP = {
   storage: 'storage',
 };
 
+const USED_ALLOWED_TYPES = new Set(['cpu', 'gpu', 'ram', 'mainboard', 'case', 'cooler']);
+
 function normalizeType(componentType) {
   const value = String(componentType || '').trim().toLowerCase();
   return TYPE_ALIASES[value] ?? value;
@@ -35,6 +37,20 @@ function numberOrNull(value) {
   if (value == null) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function offerEffectivePrice(offer) {
+  return numberOrNull(offer?.total_price) ?? numberOrNull(offer?.price_eur) ?? numberOrNull(offer?.price);
+}
+
+function isActiveOffer(offer) {
+  return offer?.is_active == null || offer.is_active === true || offer.is_active === 1;
+}
+
+function whereActiveOffer(query, column = 'is_active') {
+  return query.where((builder) => {
+    builder.where(column, true).orWhereNull(column);
+  });
 }
 
 function conditionFromOffer(offer, fallback = 'new') {
@@ -122,6 +138,7 @@ function isBadGpuOffer(normalizedType, title) {
 
 function isValidOfficialOfferForComponent(offer, normalizedType, component) {
   if (!offer) return false;
+  if (!isActiveOffer(offer)) return false;
   const price = numberOrNull(offer.price_eur);
   if (price == null || price < 10 || price > 10000) return false;
   if (!offer.url) return false;
@@ -140,7 +157,9 @@ function isValidOfficialOfferForComponent(offer, normalizedType, component) {
 
 function isValidUsedOfferForComponent(offer, normalizedType) {
   if (!offer) return false;
-  const price = numberOrNull(offer.price_eur);
+  if (!USED_ALLOWED_TYPES.has(normalizedType)) return false;
+  if (!isActiveOffer(offer)) return false;
+  const price = offerEffectivePrice(offer);
   if (price == null || price < 10 || price > 10000) return false;
   if (!offer.url) return false;
   if (offer.source !== 'ebay') return false;
@@ -153,7 +172,7 @@ function isValidUsedOfferForComponent(offer, normalizedType) {
 function serializeOffer(offer, fallbackPrice, fallbackTitle, fallbackSource = 'fallback') {
   if (!offer) return null;
   return {
-    price: numberOrNull(offer.price_eur) ?? fallbackPrice,
+    price: offerEffectivePrice(offer) ?? fallbackPrice,
     url: offer.url ?? null,
     title: offer.title ?? fallbackTitle,
     source: offer.source ?? fallbackSource,
@@ -168,6 +187,7 @@ async function findLinkedOffer(normalizedType, componentId, offerId, externalId)
     component_type: normalizedType,
     component_id: componentId,
   });
+  whereActiveOffer(query);
 
   if (offerId) {
     query.where('id', offerId);
@@ -184,8 +204,10 @@ async function findBestOfficialNewOffer(normalizedType, componentId, component) 
       component_type: normalizedType,
       component_id: componentId,
       condition: 'new',
-      is_active: true,
       is_suspicious: false,
+    })
+    .where((builder) => {
+      builder.where('is_active', true).orWhereNull('is_active');
     })
     .whereIn('source', ['geizhals', 'mindfactory'])
     .whereNotNull('url')
@@ -204,7 +226,7 @@ const OfferModel = {
     let query = db('offers').select('offers.*').where('offers.component_type', componentType).where('offers.component_id', componentId);
 
     if (activeOnly !== 'false' && activeOnly !== false) {
-      query = query.where('offers.is_active', true);
+      query = whereActiveOffer(query, 'offers.is_active');
     }
     if (condition) {
       query = query.where('offers.condition', condition);
@@ -239,19 +261,20 @@ const OfferModel = {
   },
 
   async getMarketSummary(componentType, componentId) {
-    const baseWhere = { component_type: componentType, component_id: componentId, is_active: true, is_suspicious: false };
+    const baseWhere = { component_type: componentType, component_id: componentId, is_suspicious: false };
+    const activeOffers = () => whereActiveOffer(db('offers').where(baseWhere));
 
-    const [newMin] = await db('offers')
-      .where({ ...baseWhere, condition: 'new' })
+    const [newMin] = await activeOffers()
+      .where({ condition: 'new' })
       .whereIn('source', ['geizhals', 'mindfactory'])
       .min('price_eur as value');
 
-    const [usedSafeMin] = await db('offers')
-      .where({ ...baseWhere, is_overpriced: false })
+    const [usedSafeMin] = await activeOffers()
+      .where({ is_overpriced: false })
       .whereIn('condition', ['used', 'refurbished'])
       .min('price_eur as value');
 
-    const allPrices = await db('offers').where(baseWhere).pluck('price_eur');
+    const allPrices = await activeOffers().pluck('price_eur');
 
     let market_median = null;
     if (allPrices.length > 0) {
@@ -260,9 +283,9 @@ const OfferModel = {
       market_median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
     }
 
-    const [{ total }] = await db('offers').where(baseWhere).count('id as total');
-    const sources = await db('offers').where(baseWhere).distinct('source').pluck('source');
-    const [{ last_updated }] = await db('offers').where(baseWhere).max('last_seen_at as last_updated');
+    const [{ total }] = await activeOffers().count('id as total');
+    const sources = await activeOffers().distinct('source').pluck('source');
+    const [{ last_updated }] = await activeOffers().max('last_seen_at as last_updated');
 
     return {
       new_min_price: newMin.value !== undefined ? newMin.value : null,
@@ -298,7 +321,7 @@ const OfferModel = {
     const newPrice = numberOrNull(component.recommended_new_price);
     const fallbackPrice = numberOrNull(component.price_eur ?? component.price);
 
-    if (selectedMode === 'best_value' && usedPrice != null) {
+    if (selectedMode === 'best_value' && USED_ALLOWED_TYPES.has(normalizedType) && usedPrice != null) {
       const usedOffer = await findLinkedOffer(
         normalizedType,
         componentId,
